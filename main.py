@@ -52,14 +52,18 @@ def next_question_row(curr_q_id: tp.Optional[int]) -> tp.Optional[tp.Tuple[int, 
     sql_lines = [
         'SELECT id, question',
         'FROM questions',
-        'ORDER BY id',
-        'LIMIT 1',
     ]
 
     # Add the where clause if we want to continue where we left off.
     if curr_q_id is not None:
         where_clause = f'WHERE id > {curr_q_id}'
         sql_lines.append(where_clause)
+
+    # These must appear after the `WHERE` clause, if it's there.
+    sql_lines.extend((
+        'ORDER BY id',
+        'LIMIT 1'
+    ))
 
     sql = ' '.join(sql_lines)
 
@@ -74,36 +78,8 @@ def next_question_row(curr_q_id: tp.Optional[int]) -> tp.Optional[tp.Tuple[int, 
 @app.route('/')
 def quiz():
     # Load the first question and id from the database.
-    with sqlite3.connect(SQLITE_DB_PATH) as conn:
-        cursor = conn.cursor()
-
-        ids_and_questions = cursor.execute('SELECT id, question FROM questions ORDER BY id')
-
-        return flask.render_template('main.html', id_and_questions=ids_and_questions)
-
-
-@app.route('/submit', methods=['POST'])
-def on_submit():
-    ids_and_answers = ((int(q_id), answer) for q_id, answer in flask.request.form.items())
-
-    conn = sqlite3.connect(SQLITE_DB_PATH)
-
-    # Save answers into DB.
-    with conn:
-        cursor = conn.cursor()
-        cursor.executemany(
-            'INSERT INTO answers(question_id, answer, user_id) VALUES (?, ?, ?)',
-            ((i, a, USER_ID) for i, a in ids_and_answers),
-        )
-
-    # Read the saved answers back out.
-    with conn:
-        cursor = conn.cursor()
-        q_and_a = cursor.execute('''SELECT q.question, a.answer
-            FROM questions AS q, answers AS a
-            WHERE q.id = a.question_id'''
-        )
-        return flask.render_template('submit.html', questions_and_answers=q_and_a)
+    q_id, q_text = next_question_row(None)
+    return flask.redirect(flask.url_for('question', q_id=q_id))
 
 
 @app.route('/question/<int:q_id>')
@@ -138,15 +114,15 @@ def on_submit_q(q_id):
             ((i, a, USER_ID) for i, a in ids_and_answers),
         )
 
-    next_question_row = next_question_row(q_id)
+    next_q_row = next_question_row(q_id)
 
-    if next_question_row is None:
+    if next_q_row is None:
         # Done, redirect to final landing page.
-        return flask.redirect(flask.url_for('finish'))
+        return flask.redirect(flask.url_for('on_finish'))
 
     # Otherwise, redirect to the next question.
-    next_q_id, _ = next_question_row
-    return flask.redirect(flask.url_for('question'), q_id=next_q_id)
+    next_q_id, next_q = next_q_row
+    return flask.redirect(flask.url_for('question', q_id=next_q_id))
 
 
 @app.route('/finish')
