@@ -1,4 +1,35 @@
+<script>
+    window.setTimeout(
+        function() {
+            window.location.href = "{{ url_for('on_submit_q', q_id=q_id) }}";
+        },
+        1000*60*3
+    );
+
+    const endTime = new Date().getTime() + 1000*60*3;
+
+    var x = window.setInterval(
+        function() {
+            // Get time right now.
+            var now = new Date().getTime();
+
+            // Find the distance between now and the count down date
+            var remaining = endTime - now;
+
+            if (distance > 0) {
+                clearInterval(x);
+                document.getElementById("countdown").innerHTML = "DONE";
+            }
+            else {
+                document.getElementById("countdown").innerHTML = remaining + "s remaining";
+            }
+        },
+        1000
+    );
+</script>
+
 <h1>Question #{{n}}</h1>
+<p id="countdown"></p>
 <form action='{{ url_for('on_submit_q', q_id=q_id) }}' method='POST'>
     <label for="{{q_id}}">{{q}}</label><br>
     <input type='text' name='{{q_id}}' id='{{q_id}}' />
