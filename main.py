@@ -89,7 +89,12 @@ def on_submit_q(q_id):
 
     # Load the next question, or redirect to the final landing page.
     with conn:
-        next_q_id = conn.execute(f'SELECT id FROM questions ORDER BY id LIMIT 1 WHERE id > {q_id}')
+        next_q_id = conn.execute(f'''SELECT id
+            FROM questions
+            ORDER BY id
+            LIMIT 1
+            WHERE id > {q_id}'''
+        ).fetchone()
 
         if next_q_id is None:
             # Done, redirect to the final landing page.
