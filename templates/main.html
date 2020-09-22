@@ -1,0 +1,10 @@
+<h1>Quizzonometry</h1>
+<form action='/quiz' method='POST'>
+    <ol>
+        {% for id, question in id_and_questions %}
+            <li>{{question}}</li>
+            <input type='text' name='{{id}}' id='{{id}}' />
+        {% endfor %}
+    </ol>
+    <input type="submit" value="submit" />
+</form>
