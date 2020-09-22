@@ -11,6 +11,8 @@ SAMPLE_QUESTIONS = (
     'Do you have a nickname? If so, what is it?',
 )
 
+USER_ID = 27
+
 # Create a simple SQLite DB with toy data, just for now.
 SQLITE_DB_PATH = pl.Path('store.db')
 
@@ -29,9 +31,10 @@ with sqlite3.connect(SQLITE_DB_PATH) as conn:
 
     cursor.execute('''CREATE TABLE answers (
         question_id                 INTEGER NOT NULL,
-        user_id                     INTEGER PRIMARY KEY,
+        user_id                     INTEGER NOT NULL,
         answer                      TEXT,
-        FOREIGN KEY(question_id)    REFERENCES questions(id)
+        FOREIGN KEY(question_id)    REFERENCES questions(id),
+        PRIMARY KEY(question_id, user_id)
     )''')
 
     # Add sample questions to the DB.
@@ -52,7 +55,24 @@ def quiz():
 def on_submit():
     ids_and_answers = ((int(q_id), answer) for q_id, answer in flask.request.form.items())
 
-    return f'<h1>Answers Submitted</h1>{tuple(ids_and_answers)}'
+    conn = sqlite3.connect(SQLITE_DB_PATH)
+
+    # Save answers into DB.
+    with conn:
+        cursor = conn.cursor()
+        cursor.executemany(
+            'INSERT INTO answers(question_id, answer, user_id) VALUES (?, ?, ?)',
+            ((i, a, USER_ID) for i, a in ids_and_answers),
+        )
+
+    # Read the saved answers back out.
+    with conn:
+        cursor = conn.cursor()
+        data = tuple(cursor.execute('''SELECT q.question, a.answer
+            FROM questions AS q, answers AS a
+            WHERE q.id = a.question_id'''
+        ))
+        return f'<h1>Answers Submitted</h1>{data}'
 
 if __name__ == '__main__':
     app.run(debug=True)
