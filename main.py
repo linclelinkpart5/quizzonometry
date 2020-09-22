@@ -106,6 +106,25 @@ def on_submit():
         return flask.render_template('submit.html', questions_and_answers=q_and_a)
 
 
+@app.route('/question/<int:q_id>')
+def question(q_id):
+    conn = sqlite3.connect(SQLITE_DB_PATH)
+
+    # Save the result of the just-answered question.
+    with conn:
+        cursor = conn.cursor()
+        query = cursor.execute(f'SELECT question FROM questions WHERE id = {q_id}')
+
+        # We assume that the `q_id` is valid.
+        # If it wasn't, we could either display an error, or gracefully redirect
+        # to the finish page (which requires the same code in the submit logic).
+        q = query.fetchone()[0]
+
+        # This should figure out the actual N, since the N-th question may
+        # not have an id lining up with N. But doing a simple approach for now.
+        return flask.render_template('question.html', n=q_id, q_id=q_id, q=q)
+
+
 @app.route('/submit_q/<int:q_id>', methods=['POST'])
 def on_submit_q(q_id):
     conn = sqlite3.connect(SQLITE_DB_PATH)
@@ -119,7 +138,6 @@ def on_submit_q(q_id):
             ((i, a, USER_ID) for i, a in ids_and_answers),
         )
 
-    # Load the next question, or redirect to the final landing page.
     next_question_row = next_question_row(q_id)
 
     if next_question_row is None:
@@ -127,8 +145,8 @@ def on_submit_q(q_id):
         return flask.redirect(flask.url_for('finish'))
 
     # Otherwise, redirect to the next question.
-    q_id, q_text = next_question_row
-    return flask.redirect(flask.url_for(''))
+    next_q_id, _ = next_question_row
+    return flask.redirect(flask.url_for('question'), q_id=next_q_id)
 
 
 @app.route('/finish')
