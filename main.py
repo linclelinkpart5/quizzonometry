@@ -12,5 +12,9 @@ SAMPLE_QUESTIONS = (
 def quiz():
     return flask.render_template('main.html', id_and_questions=enumerate(SAMPLE_QUESTIONS))
 
+@app.route('/submit', methods=['POST'])
+def on_submit():
+    return f'<h1>Answers Submitted</h1>{flask.request.form}'
+
 if __name__ == '__main__':
     app.run(debug=True)
