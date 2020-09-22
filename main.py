@@ -1,4 +1,5 @@
 import sqlite3
+import pathlib as pl
 
 import flask
 
@@ -10,11 +11,15 @@ SAMPLE_QUESTIONS = (
     'Do you have a nickname? If so, what is it?',
 )
 
-# Create an in-memory SQLite DB with toy data, just for now.
-CONNECTION = sqlite3.connect(':memory:')
+# Create a simple SQLite DB with toy data, just for now.
+SQLITE_DB_PATH = pl.Path('store.db')
 
-with CONNECTION:
-    cursor = CONNECTION.cursor()
+with sqlite3.connect(SQLITE_DB_PATH) as conn:
+    cursor = conn.cursor()
+
+    # Delete tables if they already exist.
+    cursor.execute('DROP TABLE IF EXISTS questions')
+    cursor.execute('DROP TABLE IF EXISTS answers')
 
     # Create some tables.
     cursor.execute('''CREATE TABLE questions (
@@ -35,7 +40,13 @@ with CONNECTION:
 
 @app.route('/')
 def quiz():
-    return flask.render_template('main.html', id_and_questions=enumerate(SAMPLE_QUESTIONS))
+    # Load the sample questions and ids from the database.
+    with sqlite3.connect(SQLITE_DB_PATH) as conn:
+        cursor = conn.cursor()
+
+        ids_and_questions = cursor.execute('SELECT id, question FROM questions ORDER BY id')
+
+        return flask.render_template('main.html', id_and_questions=ids_and_questions)
 
 @app.route('/submit', methods=['POST'])
 def on_submit():
