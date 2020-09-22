@@ -16,7 +16,7 @@
             // Find the distance between now and the count down date
             var remaining = endTime - now;
 
-            if (distance > 0) {
+            if (distance < 0) {
                 clearInterval(x);
                 document.getElementById("countdown").innerHTML = "DONE";
             }
@@ -24,7 +24,7 @@
                 document.getElementById("countdown").innerHTML = remaining + "s remaining";
             }
         },
-        1000
+        10
     );
 </script>
 

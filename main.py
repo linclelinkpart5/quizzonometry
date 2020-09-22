@@ -104,17 +104,23 @@ def question(q_id):
         return flask.render_template('question.html', n=q_id, q_id=q_id, q=q)
 
 
-@app.route('/submit_q/<int:q_id>', methods=['POST'])
+@app.route('/submit_q/<int:q_id>', methods=['GET', 'POST'])
 def on_submit_q(q_id):
     conn = sqlite3.connect(SQLITE_DB_PATH)
 
     # Save the result of the just-answered question.
-    ids_and_answers = ((int(q_id), answer) for q_id, answer in flask.request.form.items())
+    # Handles the case of calling this with GET (i.e. via using `url_for`).
+    if flask.request.method == 'POST':
+        form_data = next(flask.request.form.items())
+        answer = form_data[1]
+    else:
+        answer = ''
+
     with conn:
         cursor = conn.cursor()
-        cursor.executemany(
+        cursor.execute(
             'INSERT INTO answers(question_id, answer, user_id) VALUES (?, ?, ?)',
-            ((i, a, USER_ID) for i, a in ids_and_answers),
+            (q_id, answer, USER_ID),
         )
 
     next_q_id = next_question_id(q_id)
