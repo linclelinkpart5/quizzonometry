@@ -68,11 +68,11 @@ def on_submit():
     # Read the saved answers back out.
     with conn:
         cursor = conn.cursor()
-        data = tuple(cursor.execute('''SELECT q.question, a.answer
+        q_and_a = cursor.execute('''SELECT q.question, a.answer
             FROM questions AS q, answers AS a
             WHERE q.id = a.question_id'''
-        ))
-        return f'<h1>Answers Submitted</h1>{data}'
+        )
+        return flask.render_template('submit.html', questions_and_answers=q_and_a)
 
 if __name__ == '__main__':
     app.run(debug=True)
