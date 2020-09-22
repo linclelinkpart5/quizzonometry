@@ -43,14 +43,13 @@ with sqlite3.connect(SQLITE_DB_PATH) as conn:
     cursor.executemany("INSERT INTO questions(question) VALUES (?)", ((q,) for q in SAMPLE_QUESTIONS))
 
 
-def next_question_row(curr_q_id: tp.Optional[int]) -> tp.Optional[tp.Tuple[int, str]]:
+def next_question_id(curr_q_id: tp.Optional[int]) -> tp.Optional[tp.Tuple[int, str]]:
     '''Given an optional current question id (as would be in the DB),
-    returns the next question id and text immediately after it, if it exists.
-    If the current id is None, returns the first question id and text,
-    if it exists.'''
+    returns the next question id immediately after it, if it exists.
+    If the current id is None, returns the first question id, if it exists.'''
 
     sql_lines = [
-        'SELECT id, question',
+        'SELECT id',
         'FROM questions',
     ]
 
@@ -72,13 +71,17 @@ def next_question_row(curr_q_id: tp.Optional[int]) -> tp.Optional[tp.Tuple[int, 
     # Save answers into DB.
     with conn:
         query = conn.execute(sql)
-        return query.fetchone()
+        result = query.fetchone()
+
+        if result is None:
+            return None
+        return result[0]
 
 
 @app.route('/')
 def quiz():
     # Load the first question and id from the database.
-    q_id, q_text = next_question_row(None)
+    q_id = next_question_id(None)
     return flask.redirect(flask.url_for('question', q_id=q_id))
 
 
@@ -114,14 +117,13 @@ def on_submit_q(q_id):
             ((i, a, USER_ID) for i, a in ids_and_answers),
         )
 
-    next_q_row = next_question_row(q_id)
+    next_q_id = next_question_id(q_id)
 
-    if next_q_row is None:
+    if next_q_id is None:
         # Done, redirect to final landing page.
         return flask.redirect(flask.url_for('on_finish'))
 
     # Otherwise, redirect to the next question.
-    next_q_id, next_q = next_q_row
     return flask.redirect(flask.url_for('question', q_id=next_q_id))
 
 
