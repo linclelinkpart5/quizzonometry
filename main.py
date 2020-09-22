@@ -74,5 +74,27 @@ def on_submit():
         )
         return flask.render_template('submit.html', questions_and_answers=q_and_a)
 
+@app.route('/submit_q/<int:q_id>', methods=['POST'])
+def on_submit_q(q_id):
+    conn = sqlite3.connect(SQLITE_DB_PATH)
+
+    # Save the result of the just-answered question.
+    ids_and_answers = ((int(q_id), answer) for q_id, answer in flask.request.form.items())
+    with conn:
+        cursor = conn.cursor()
+        cursor.executemany(
+            'INSERT INTO answers(question_id, answer, user_id) VALUES (?, ?, ?)',
+            ((i, a, USER_ID) for i, a in ids_and_answers),
+        )
+
+    # Load the next question, or redirect to the final landing page.
+    with conn:
+        next_q_id = conn.execute(f'SELECT id FROM questions ORDER BY id LIMIT 1 WHERE id > {q_id}')
+
+        if next_q_id is None:
+            # Done, redirect to the final landing page.
+        else:
+            # More to go, redirect to the next page.
+
 if __name__ == '__main__':
     app.run(debug=True)
