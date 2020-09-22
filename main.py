@@ -61,7 +61,7 @@ def next_question_row(curr_q_id: tp.Optional[int]) -> tp.Optional[tp.Tuple[int, 
         where_clause = f'WHERE id > {curr_q_id}'
         sql_lines.append(where_clause)
 
-    sql = '\n'.join(sql_lines)
+    sql = ' '.join(sql_lines)
 
     conn = sqlite3.connect(SQLITE_DB_PATH)
 
@@ -124,10 +124,25 @@ def on_submit_q(q_id):
 
     if next_question_row is None:
         # Done, redirect to final landing page.
-        pass
-    else:
-        # Redirect to the next question.
-        q_id, q_text = next_question_row
+        return flask.redirect(flask.url_for('finish'))
+
+    # Otherwise, redirect to the next question.
+    q_id, q_text = next_question_row
+    return flask.redirect(flask.url_for(''))
+
+
+@app.route('/finish')
+def on_finish():
+    conn = sqlite3.connect(SQLITE_DB_PATH)
+
+    # Read the saved answers back out.
+    with conn:
+        cursor = conn.cursor()
+        q_and_a = cursor.execute(f'''SELECT q.question, a.answer
+            FROM questions AS q, answers AS a
+            WHERE q.id = a.question_id AND a.user_id = {USER_ID}'''
+        )
+        return flask.render_template('finish.html', questions_and_answers=q_and_a)
 
 
 if __name__ == '__main__':

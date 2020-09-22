@@ -1,0 +1,10 @@
+<h1>Answers Submitted!</h1>
+
+<ol>
+    {% for question, answer in questions_and_answers %}
+        <li>{{question}}</li>
+        <ul>
+            <li>{{answer}}</li>
+        </ul>
+    {% endfor %}
+</ol>
