@@ -50,7 +50,9 @@ def quiz():
 
 @app.route('/submit', methods=['POST'])
 def on_submit():
-    return f'<h1>Answers Submitted</h1>{flask.request.form}'
+    ids_and_answers = ((int(q_id), answer) for q_id, answer in flask.request.form.items())
+
+    return f'<h1>Answers Submitted</h1>{tuple(ids_and_answers)}'
 
 if __name__ == '__main__':
     app.run(debug=True)
