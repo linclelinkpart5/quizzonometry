@@ -1,5 +1,6 @@
 import sqlite3
 import pathlib as pl
+import typing as tp
 
 import flask
 
@@ -41,15 +42,45 @@ with sqlite3.connect(SQLITE_DB_PATH) as conn:
     # Generator expression looks funky, since each question needs to be a 1-tuple.
     cursor.executemany("INSERT INTO questions(question) VALUES (?)", ((q,) for q in SAMPLE_QUESTIONS))
 
+
+def next_question_row(curr_q_id: tp.Optional[int]) -> tp.Optional[tp.Tuple[int, str]]:
+    '''Given an optional current question id (as would be in the DB),
+    returns the next question id and text immediately after it, if it exists.
+    If the current id is None, returns the first question id and text,
+    if it exists.'''
+
+    sql_lines = [
+        'SELECT id, question',
+        'FROM questions',
+        'ORDER BY id',
+        'LIMIT 1',
+    ]
+
+    # Add the where clause if we want to continue where we left off.
+    if curr_q_id is not None:
+        where_clause = f'WHERE id > {curr_q_id}'
+        sql_lines.append(where_clause)
+
+    sql = '\n'.join(sql_lines)
+
+    conn = sqlite3.connect(SQLITE_DB_PATH)
+
+    # Save answers into DB.
+    with conn:
+        query = conn.execute(sql)
+        return query.fetchone()
+
+
 @app.route('/')
 def quiz():
-    # Load the sample questions and ids from the database.
+    # Load the first question and id from the database.
     with sqlite3.connect(SQLITE_DB_PATH) as conn:
         cursor = conn.cursor()
 
         ids_and_questions = cursor.execute('SELECT id, question FROM questions ORDER BY id')
 
         return flask.render_template('main.html', id_and_questions=ids_and_questions)
+
 
 @app.route('/submit', methods=['POST'])
 def on_submit():
@@ -74,6 +105,7 @@ def on_submit():
         )
         return flask.render_template('submit.html', questions_and_answers=q_and_a)
 
+
 @app.route('/submit_q/<int:q_id>', methods=['POST'])
 def on_submit_q(q_id):
     conn = sqlite3.connect(SQLITE_DB_PATH)
@@ -88,18 +120,15 @@ def on_submit_q(q_id):
         )
 
     # Load the next question, or redirect to the final landing page.
-    with conn:
-        next_q_id = conn.execute(f'''SELECT id
-            FROM questions
-            ORDER BY id
-            LIMIT 1
-            WHERE id > {q_id}'''
-        ).fetchone()
+    next_question_row = next_question_row(q_id)
 
-        if next_q_id is None:
-            # Done, redirect to the final landing page.
-        else:
-            # More to go, redirect to the next page.
+    if next_question_row is None:
+        # Done, redirect to final landing page.
+        pass
+    else:
+        # Redirect to the next question.
+        q_id, q_text = next_question_row
+
 
 if __name__ == '__main__':
     app.run(debug=True)
